@@ -4,7 +4,8 @@ using UnityEngine;
 
 public class PublicPlace : MonoBehaviour
 {
-    public static List<PublicPlace> PublicPlaces = new List<PublicPlace>();
+    public static PublicPlace AvailableSpace => publicPlaces.Find(place => place.AvailableCapacity > 0);
+    static List<PublicPlace> publicPlaces = new List<PublicPlace>();
 
     public int AvailableCapacity => capacity - visitors.Count;
 
@@ -14,7 +15,7 @@ public class PublicPlace : MonoBehaviour
     List<Citizen> visitors = new List<Citizen>();
 
     void Awake() {
-        PublicPlaces.Add(this);    
+        publicPlaces.Add(this);    
     }
 
     public bool ReserveTable(Citizen citizen) {
@@ -24,15 +25,9 @@ public class PublicPlace : MonoBehaviour
         return true;
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public void LeaveSpace(Citizen citizen) {
+        if (!visitors.Contains(citizen)) return;
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        visitors.Remove(citizen);
     }
 }
