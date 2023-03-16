@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class Citizen : MonoBehaviour
 {
@@ -16,17 +17,25 @@ public class Citizen : MonoBehaviour
         
         private set {
             _currentStatus = value;
+            Debug.Log(gameObject.name + "was " + value.ToString());
+            Debug.Log("Health: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Health).Count);
+            Debug.Log("Dead: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Dead).Count);
+            Debug.Log("Invisible Infected: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.InvisibleInfected).Count);
+            Debug.Log("Infected: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Infected).Count);
         }
     }
     Status _currentStatus = Status.Health;
 
     PublicPlace currentActivity;
     int incubationCount = 0, infectedCount = 0;
-    Vector3 homePos;
+    Home home;
+    NavMeshAgent agent;
 
     void Awake() {
-        City.Instance.WorkingTime += OnWorkingTime;
+        City.Instance.WakeupTime += OnWakeupTime;
         City.Instance.HomeTime += OnHomeTime;
+        City.Citizens.Add(this);
+        agent = GetComponent<NavMeshAgent>();
     }
 
     public void TryInfect() {
@@ -38,15 +47,19 @@ public class Citizen : MonoBehaviour
         CurrentStatus = Status.InvisibleInfected;
     }
 
+    public void SetHome(Home h) {
+        home = h;
+    }
+
     void OnHomeTime() {
         StopAllCoroutines();
         if (currentActivity)
             currentActivity.LeaveSpace(this);
 
-        //Translate to home
+        StartCoroutine(DoTranslateTo(home.transform));
     }
 
-    void OnWorkingTime() {
+    void OnWakeupTime() {
         if (CurrentStatus == Status.InvisibleInfected) {
             if (incubationCount < WorldSettings.Active.IncubationPeriod) {
                 incubationCount++;
@@ -68,7 +81,7 @@ public class Citizen : MonoBehaviour
         currentActivity = PublicPlace.AvailableSpace;
         currentActivity.ReserveTable(this);
 
-        //Translate to work
+        StartCoroutine(DoTranslateTo(currentActivity.transform));
     }
 
     void Death() {
@@ -89,5 +102,17 @@ public class Citizen : MonoBehaviour
             yield return waitForHour;
         }
 
+    }
+
+    [ContextMenu("Sick")]
+    public void Sick() {
+        CurrentStatus = Status.InvisibleInfected;
+    }
+
+    IEnumerator DoTranslateTo(Transform dest) {
+        while (Vector3.Distance(transform.position, dest.position) > 1) {
+            yield return null;
+            transform.position = Vector3.Lerp(transform.position, dest.position, Time.deltaTime);
+        }
     }
 }
