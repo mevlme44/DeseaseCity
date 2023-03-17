@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[DefaultExecutionOrder(-25)]
 public class City : MonoBehaviour
 {
     public static City Instance { get; private set; }
@@ -26,22 +27,30 @@ public class City : MonoBehaviour
         CurrentDate = CurrentDate.AddHours(1);
     }
 
-    void Update() {
-        Time.timeScale = TimeScale;
+    [ContextMenu("Go to work")]
+    public void GoToWork() {
+        WakeupTime?.Invoke();
+    }
+
+    [ContextMenu("Start work")]
+    public void StartWork() {
+        WorkingTime?.Invoke();
+    }
+
+    [ContextMenu("Go home")]
+    public void GoHome() {
+        HomeTime?.Invoke();
     }
 
     IEnumerator DoTickTime() {
-        var waitForSecond = new WaitForSeconds(1f);
-
         while (!isQuit) {
-            yield return waitForSecond;
+            yield return new WaitForSeconds(1f / TimeScale);
             CurrentDate = CurrentDate.AddSeconds(1);
 
-            if (CurrentDate.DayOfWeek != DayOfWeek.Saturday && CurrentDate.DayOfWeek != DayOfWeek.Sunday) {
                 if (CurrentDate.TimeOfDay.Hours == 7 && CurrentDate.TimeOfDay.Minutes == 0 && CurrentDate.TimeOfDay.Seconds == 0) WakeupTime?.Invoke();
                 if (CurrentDate.TimeOfDay.Hours == 9 && CurrentDate.TimeOfDay.Minutes == 0 && CurrentDate.TimeOfDay.Seconds == 0) WorkingTime?.Invoke();
                 if (CurrentDate.TimeOfDay.Hours == 20 && CurrentDate.TimeOfDay.Minutes == 0 && CurrentDate.TimeOfDay.Seconds == 0) HomeTime?.Invoke();
-            }
+            
         }
     }
 }

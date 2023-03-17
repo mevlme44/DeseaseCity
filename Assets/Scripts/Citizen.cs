@@ -1,9 +1,14 @@
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
 public class Citizen : MonoBehaviour
 {
+    public static event Action ChangeStatus;
+
+    [Serializable]
     public enum Status {
         Health = 0,
         InvisibleInfected = 1,
@@ -17,31 +22,29 @@ public class Citizen : MonoBehaviour
         
         private set {
             _currentStatus = value;
-            Debug.Log(gameObject.name + "was " + value.ToString());
-            Debug.Log("Health: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Health).Count);
-            Debug.Log("Dead: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Dead).Count);
-            Debug.Log("Invisible Infected: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.InvisibleInfected).Count);
-            Debug.Log("Infected: " + City.Citizens.FindAll(c => c.CurrentStatus == Status.Infected).Count);
+            Debug.LogError("Status");
+            ChangeStatus?.Invoke();
         }
     }
-    Status _currentStatus = Status.Health;
+    public Status _currentStatus = Status.Health;
 
     PublicPlace currentActivity;
     int incubationCount = 0, infectedCount = 0;
     Home home;
-    NavMeshAgent agent;
 
     void Awake() {
         City.Instance.WakeupTime += OnWakeupTime;
         City.Instance.HomeTime += OnHomeTime;
         City.Citizens.Add(this);
-        agent = GetComponent<NavMeshAgent>();
+
+        if (UnityEngine.Random.Range(0f, 1f) <= WorldSettings.Active.InfectionProbability)
+            CurrentStatus = Status.InvisibleInfected;
     }
 
     public void TryInfect() {
         if (CurrentStatus == Status.InvisibleInfected || CurrentStatus == Status.Infected || CurrentStatus == Status.Recovered) return;
 
-        var result = Random.Range(0f, 1f);
+        var result = UnityEngine.Random.Range(0f, 1f);
         if (result > WorldSettings.Active.InfectionProbability) return;
 
         CurrentStatus = Status.InvisibleInfected;
@@ -61,12 +64,10 @@ public class Citizen : MonoBehaviour
 
     void OnWakeupTime() {
         if (CurrentStatus == Status.InvisibleInfected) {
-            if (incubationCount < WorldSettings.Active.IncubationPeriod) {
+            if (incubationCount < WorldSettings.Active.IncubationPeriod) 
                 incubationCount++;
-                return;
-            }
-
-            CurrentStatus = Status.Infected;
+            else 
+                CurrentStatus = Status.Infected;
         }
 
         if (CurrentStatus == Status.Infected) {
@@ -79,6 +80,7 @@ public class Citizen : MonoBehaviour
         }
 
         currentActivity = PublicPlace.AvailableSpace;
+        Debug.LogError(currentActivity.name);
         currentActivity.ReserveTable(this);
 
         StartCoroutine(DoTranslateTo(currentActivity.transform));
@@ -93,7 +95,7 @@ public class Citizen : MonoBehaviour
         infectedCount++;
         var waitForHour = new WaitForSeconds(60 * 60);
         while (true) {
-            var result = Random.Range(0f, 1f);
+            var result = UnityEngine.Random.Range(0f, 1f);
             if (result < WorldSettings.Active.DeathProbability) {
                 Death();
                 yield break;
@@ -110,9 +112,11 @@ public class Citizen : MonoBehaviour
     }
 
     IEnumerator DoTranslateTo(Transform dest) {
-        while (Vector3.Distance(transform.position, dest.position) > 1) {
+        var sphere = UnityEngine.Random.insideUnitSphere;
+        sphere.y = 0;
+        for (float t = 0; t < 10f; t += Time.deltaTime) {
             yield return null;
-            transform.position = Vector3.Lerp(transform.position, dest.position, Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, dest.position + sphere, t);
         }
     }
 }

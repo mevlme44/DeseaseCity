@@ -39,23 +39,22 @@ public class PublicPlace : MonoBehaviour
 
     void OnWorkingTime() {
         StartCoroutine(DoSomeCollaborate());
-        Debug.LogError("AAA");
     }
 
     IEnumerator DoSomeCollaborate() {
-        var waitForHour = new WaitForSeconds(60 * 60);
         var sickedVisitors = visitors.FindAll(visitor => visitor.CurrentStatus == Citizen.Status.Infected || visitor.CurrentStatus == Citizen.Status.InvisibleInfected);
         var healthVisitors = visitors.FindAll(visitor => visitor.CurrentStatus != Citizen.Status.Infected && visitor.CurrentStatus != Citizen.Status.InvisibleInfected);
-
+        Debug.LogError("111");
         if (sickedVisitors.Count == 0 || healthVisitors.Count == 0) yield break;
+        Debug.LogError("AAA");
 
         while (true) {
             foreach(var v in sickedVisitors) {
                 var randomVisitor = healthVisitors[Random.Range(0, healthVisitors.Count)];
-
+                
                 randomVisitor.TryInfect();
             }
-            yield return waitForHour;
+            yield return new WaitForSeconds(60 * 60 / City.Instance.TimeScale);
         }
     }
 }
